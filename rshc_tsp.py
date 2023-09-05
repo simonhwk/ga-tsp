@@ -31,13 +31,6 @@ def total_distance(order, cities):
 
     return dist
 
-
-def random_mutation(order):
-    mutated_order = order.copy()
-    idx1, idx2 = random.sample(range(len(order)), 2)
-    mutated_order[idx1], mutated_order[idx2] = mutated_order[idx2], mutated_order[idx1]
-    return mutated_order
-
 def rs_tsp(cities, iterations = 100000):
     best_order = list(range(len(cities))) # shortest order to visit the cities
     best_distance = total_distance(best_order, cities)
@@ -62,7 +55,7 @@ def rmhc_tsp(cities, iterations = 100000):
     distance_over_time = [best_distance]
 
     for _ in range(iterations):
-        mutated_order = random_mutation(best_order)
+        mutated_order = swap_mutation(best_order)
         current_distance = total_distance(mutated_order, cities)
 
         if current_distance < best_distance:
@@ -88,52 +81,68 @@ def ordered_crossover(parent1, parent2):
             pointer += 1
     return offspring
 
-def swap_mutation(route):
-    mutated_route = route.copy()
-    idx1, idx2 = random.sample(range(len(route)), 2)
-    mutated_route[idx1], mutated_route[idx2] = mutated_route[idx2], mutated_route[idx1]
-    return mutated_route
+# Used for RMHC and GA
+def swap_mutation(path):
+    mutated_path = path.copy()
+    idx1, idx2 = random.sample(range(len(path)), 2)
+    mutated_path[idx1], mutated_path[idx2] = mutated_path[idx2], mutated_path[idx1]
+    return mutated_path
 
 # Reduced Genetic Algorithm for TSP
 def genetic_algorithm_tsp(cities, pop_size=50, generations=1000, crossover_prob=0.8, mutation_prob=0.1):
     population = [list(range(len(cities))) for _ in range(pop_size)]
-    for route in population:
-        random.shuffle(route)
+
+    for path in population:
+        random.shuffle(path)
     best_order = None
     best_distance = float('inf')
     distance_over_time = []
+
     for _ in range(generations):
-        fitnesses = [1 / total_distance(route, cities) for route in population]
+
+        fitnesses = [1 / total_distance(path, cities) for path in population]
         total_fitness = sum(fitnesses)
         mating_pool = []
+
+        # Roulette Wheel Selection -> mating_pool reflects fitness
         for _ in range(pop_size):
             pick = random.uniform(0, total_fitness)
             current = 0
-            for idx, route in enumerate(population):
+            for idx, path in enumerate(population):
                 current += fitnesses[idx]
                 if current > pick:
-                    mating_pool.append(route)
+                    mating_pool.append(path)
                     break
+
+        # Crossover and Mutation
         new_population = []
         for i in range(0, pop_size, 2):
+
+            # Ordered Crossover
             parent1, parent2 = mating_pool[i], mating_pool[i+1]
             if random.random() < crossover_prob:
                 offspring1 = ordered_crossover(parent1, parent2)
                 offspring2 = ordered_crossover(parent2, parent1)
             else:
                 offspring1, offspring2 = parent1, parent2
+
+            # Swap Mutation
             if random.random() < mutation_prob:
                 offspring1 = swap_mutation(offspring1)
             if random.random() < mutation_prob:
                 offspring2 = swap_mutation(offspring2)
             new_population.extend([offspring1, offspring2])
+
         population = new_population
-        for route in population:
-            current_distance = total_distance(route, cities)
+        for path in population:
+            current_distance = total_distance(path, cities)
             if current_distance < best_distance:
                 best_distance = current_distance
-                best_order = route
+                best_order = path
         distance_over_time.append(best_distance)
+
+        # Move on to next generation
+
     return best_order, best_distance, distance_over_time
 
 # Running the genetic algorithm with reduced parameters
