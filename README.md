@@ -1,6 +1,5 @@
 MECCS4510 - Traveling Salesman Problem
 
-# tsp.txt - Official assignment file
 Solve this traveling salesman problem file with 1000 datapoints using your
 evolutionary algorithm. Try different variations of GA.
 
@@ -11,10 +10,6 @@ evolutionary algorithm. Try different variations of GA.
 - Genetic Algorithm (Tournament Selection & Hierarchical)
 
 ![RS VS RMHC VS GA](./rs_rmhc_ga_v2.png)
-
-# tsp_10.txt - Test file
-A simple test file with only 10  datapoints for you to test if your
-algorithm works.
 
 # Top Tip:
 Make your own test file to debug your algorithm. For example: make a file of
