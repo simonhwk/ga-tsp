@@ -2,69 +2,81 @@ import matplotlib.pyplot as plt
 import random
 import numpy as np
 from matplotlib.animation import FuncAnimation
+from multiprocessing import Pool, cpu_count
 
 # TSP problem : finding the shortest path to visit all the cities exactly once
 # Random Search
 
 # Input Data (1000 Coordinate Points and display it with matplotlib)
 
-cities = []
+cities = np.loadtxt('tsp.txt', delimiter=',')
 
-with open('tsp.txt', 'r') as file:
-    for line in file:
-        x, y = map(float, line.strip().split(','))
-        cities.append((x, y))
+def fitness_evaluation(path):
+    return 1 / total_distance(path, cities)
 
+def parallel_fitness_evaluation(population):
+    with Pool(cpu_count()) as pool:
+        fitnesses = pool.map(fitness_evaluation, population)
+    return fitnesses
 
 def distance(city1, city2):
-    x1, y1 = city1
-    x2, y2 = city2
-    return ((x1 - x2)**2 + (y1 - y2)**2) ** 0.5
+    return np.linalg.norm(city1 - city2)
 
 def total_distance(order, cities):
-    dist = 0
-    for i in range(len(order) - 1):
-        dist += distance(cities[order[i]], cities[order[i+1]])
+    ordered_cities = cities[order]
+    pairwise_distances = np.linalg.norm(ordered_cities - np.roll(ordered_cities, -1, axis=0), axis=1)
+    return pairwise_distances.sum()
 
-    # connect the last city to the first city
-    dist += distance(cities[order[-1]], cities[order[0]])
-
-    return dist
+def rs_evaluation(i, best_order, best_distance):
+    random_order = best_order.copy()
+    random.shuffle(random_order)
+    current_distance = total_distance(random_order, cities)
+    if current_distance < best_distance:
+        best_distance = current_distance
+        best_order = random_order
+    return best_order, best_distance
 
 def rs_tsp(cities, iterations = 1000000):
-    best_order = list(range(len(cities))) # shortest order to visit the cities
+    best_order = list(range(len(cities)))
     best_distance = total_distance(best_order, cities)
     distance_over_time = [best_distance]
-
-    for _ in range(iterations):
-        random_order = best_order.copy()
-        random.shuffle(random_order)
-        current_distance = total_distance(random_order, cities)
-
-        if current_distance < best_distance:
-            best_distance = current_distance
-            best_order = random_order
-        
+    
+    with Pool(cpu_count()) as pool:
+        results = pool.starmap(rs_evaluation, [(i, best_order, best_distance) for i in range(iterations)])
+    
+    for order, dist in results:
+        if dist < best_distance:
+            best_distance = dist
+            best_order = order
         distance_over_time.append(best_distance)
-
+    
     return best_order, best_distance, distance_over_time
+
+
+def rmhc_evaluation(i, best_order, best_distance):
+    mutated_order = swap_mutation(best_order)
+    current_distance = total_distance(mutated_order, cities)
+    if current_distance < best_distance:
+        best_distance = current_distance
+        best_order = mutated_order
+    return best_order, best_distance
 
 def rmhc_tsp(cities, iterations = 1000000):
     best_order = list(range(len(cities)))
     best_distance = total_distance(best_order, cities)
     distance_over_time = [best_distance]
-
-    for _ in range(iterations):
-        mutated_order = swap_mutation(best_order)
-        current_distance = total_distance(mutated_order, cities)
-
-        if current_distance < best_distance:
-            best_distance = current_distance
-            best_order = mutated_order
-
+    
+    with Pool(cpu_count()) as pool:
+        results = pool.starmap(rmhc_evaluation, [(i, best_order, best_distance) for i in range(iterations)])
+    
+    for order, dist in results:
+        if dist < best_distance:
+            best_distance = dist
+            best_order = order
         distance_over_time.append(best_distance)
     
     return best_order, best_distance, distance_over_time
+
 
 # Ordered Crossover (OX)
 def ordered_crossover(parent1, parent2):
@@ -117,19 +129,9 @@ def ga_tsp(cities, initial_population = None, pop_size=50, generations=20000,cro
 
     for _ in range(generations):
 
-        fitnesses = [1 / total_distance(path, cities) for path in population]
+        fitnesses = parallel_fitness_evaluation(population)
         total_fitness = sum(fitnesses)
         mating_pool = []
-
-        # # Roulette Wheel Selection -> mating_pool reflects fitness
-        # for _ in range(pop_size):
-        #     pick = random.uniform(0, total_fitness)
-        #     current = 0
-        #     for idx, path in enumerate(population):
-        #         current += fitnesses[idx]
-        #         if current > pick:
-        #             mating_pool.append(path)
-        #             break
 
         mating_pool = tournament_selection(population, fitnesses, tournament_size=3)
 
@@ -173,46 +175,6 @@ def ga_tsp(cities, initial_population = None, pop_size=50, generations=20000,cro
     return best_order, best_distance, distance_over_time
 
 
-# def incremental_ga_tsp(cities, pop_size=50, generations=2000, crossover_prob=0.5, mutation_prob=0.1):
-#     # Initially select a subset of 4 points randomly
-#     subset_cities = random.sample(cities, 4)
-#     remaining_cities = [city for city in cities if city not in subset_cities]
-
-#     # Initial population for the subset of points
-#     population = [list(range(len(subset_cities))) for _ in range(pop_size)]
-#     for path in population:
-#         random.shuffle(path)
-
-#     best_order = None
-#     best_distance = float('inf')
-#     distance_over_time = []
-
-#     while len(remaining_cities) >= 2:  # Ensure there are at least two cities to add
-#         # Solve the TSP for the current subset of cities using GA
-#         best_order, best_distance, _ = ga_tsp(subset_cities, initial_population=population, pop_size=pop_size, generations=generations, crossover_prob=crossover_prob, mutation_prob=mutation_prob)
-#         distance_over_time.append(best_distance)
-
-#         # Randomly add two new cities to the subset
-#         new_cities = random.sample(remaining_cities, 2)
-#         subset_cities.extend(new_cities)
-#         for city in new_cities:
-#             remaining_cities.remove(city)
-
-#         # Update the population to include the new cities
-#         for path in population:
-#             for new_city_idx in range(len(subset_cities) - 2, len(subset_cities)):  # Last two added cities
-#                 # Introduce each new city at a random position in the genome
-#                 new_position = random.randint(0, len(path))
-#                 path.insert(new_position, new_city_idx)
-
-#         print(f"Now solving for {len(subset_cities)} cities...") 
-
-#     return best_order, best_distance, distance_over_time
-
-
-# incremental_ga_best_order, incremental_ga_best_distance, incremental_ga_distance_over_time = incremental_ga_tsp(cities)
-
-
 # Running the genetic algorithm with reduced parameters
 ga_best_order, ga_best_distance, ga_distance_over_time = ga_tsp(cities)
 
@@ -252,15 +214,6 @@ plt.plot([x_set[i] for i in ga_best_order] + [x_set[ga_best_order[0]]],
 plt.title(f"Genetic Algorithm TSP: Shortest Path Distance = {ga_best_distance:.2f}")
 plt.xlabel('x set')
 plt.ylabel('y set')
-
-# # Plotting for Incremental Genetic Algorithm
-# plt.subplot(1, 4, 4)
-# plt.scatter(x_set, y_set, color='orange')
-# plt.plot([x_set[i] for i in incremental_ga_best_order] + [x_set[incremental_ga_best_order[0]]],
-#          [y_set[i] for i in incremental_ga_best_order] + [y_set[incremental_ga_best_order[0]]], color='blue')
-# plt.title(f"Incremental Genetic Algorithm TSP: Shortest Path Distance = {incremental_ga_best_distance:.2f}")
-# plt.xlabel('x set')
-# plt.ylabel('y set')
 
 plt.tight_layout()
 plt.show()
