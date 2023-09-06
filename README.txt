@@ -4,7 +4,7 @@ MECCS4510 - Traveling Salesman Problem
 Solve this traveling salesman problem file with 1000 datapoints using your
 evolutionary algorithm. Try different variations of GA.
 
-- Random Search as base
+- Random Search
 - Random Mutation Hill Climber
 - Genetic Algorithm (Roulette Wheel Selection)
 - Genetic Algorithm (Tournament Selection)
