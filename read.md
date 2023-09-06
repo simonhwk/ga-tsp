@@ -1,1 +1,1 @@
-TSP solved with ga
+TSP solved with Genetic Algorithms
