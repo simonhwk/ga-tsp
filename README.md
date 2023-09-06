@@ -10,6 +10,8 @@ evolutionary algorithm. Try different variations of GA.
 - Genetic Algorithm (Tournament Selection)
 - Genetic Algorithm (Tournament Selection & Hierarchical)
 
+![RS VS RMHC VS GA](./rs_rmhc_ga_v2.png)
+
 # tsp_10.txt - Test file
 A simple test file with only 10  datapoints for you to test if your
 algorithm works.
