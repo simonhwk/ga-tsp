@@ -2,7 +2,7 @@ MECCS4510 - Traveling Salesman Problem
 
 # tsp.txt - Official assignment file
 Solve this traveling salesman problem file with 1000 datapoints using your
-evolutionary algorithm.
+evolutionary algorithm. Try different variations of GA.
 
 # tsp_10.txt - Test file
 A simple test file with only 10  datapoints for you to test if your
